@@ -1,18 +1,64 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors()); // Enable CORS
-app.use(express.json()); // Enable JSON parsing
+// Security middleware
+app.use(helmet());
 
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true
+}));
+
+app.use(express.json());
+app.use(cookieParser());
+
+// Rate limiting for authentication routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50,
+  message: {
+    message: "Too many requests, please try again later"
+  }
+});
+
+app.use("/api/auth", authLimiter);
+
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((error) => console.log("❌ MongoDB connection error:", error));
 
-app.use("/api/notes", require("./routes/notes")); // Route for Notes
+// Routes
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/projects", require("./routes/projects"));
+app.use("/api/notes", require("./routes/notes"));
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Basic health check
+app.get("/", (req, res) => {
+  res.json({
+    message: "API is running"
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  res.status(500).json({
+    message: "Something went wrong"
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
