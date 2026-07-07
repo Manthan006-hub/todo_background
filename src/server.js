@@ -1,11 +1,17 @@
 const express = require("express");
+const path = require("path");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-require("dotenv").config();
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+
+if (!process.env.JWT_SECRET) {
+  console.error("❌ JWT_SECRET is missing. Add it to the .env file.");
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;

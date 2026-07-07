@@ -1,6 +1,14 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is missing");
+  }
+  return secret;
+};
+
 const auth = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
@@ -9,7 +17,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {

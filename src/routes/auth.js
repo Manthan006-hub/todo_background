@@ -3,8 +3,16 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../models/User");
 
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is missing");
+  }
+  return secret;
+};
+
 const signToken = (user) => {
-  return jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ id: user._id }, getJwtSecret(), { expiresIn: "7d" });
 };
 
 const sendTokenCookie = (res, token) => {
@@ -75,7 +83,7 @@ router.get("/me", async (req, res) => {
     const token = req.cookies?.token;
     if (!token) return res.status(401).json({ message: "Not authenticated" });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) return res.status(401).json({ message: "User not found" });
